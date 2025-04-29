@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Algebra Solver Pro</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.js"></script>
+  <style>
+    :root {
+      --primary: #df1010;
+      --secondary: #ff6b6b;
+      --dark: #2d3748;
+      --light: #f7fafc;
+      --success: #48bb78;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #fbf9f9;
+      color: var(--dark);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      background: rgb(125, 97, 216);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(254, 251, 251, 0.985);
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    
+    h1 {
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 30px;
+      font-weight: 700;
+      font-size: 2.2rem;
+    }
+    
+    .select-container {
+      margin-bottom: 25px;
+    }
+    
+    select, input, textarea, button {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 8px 0;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    select {
+      background-color: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 20px;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.2);
+    }
+    
+    button {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      padding: 14px;
+      font-size: 18px;
+      margin-top: 15px;
+    }
+    
+    button:hover {
+      background-color: #253b9d;
+      transform: translateY(-2px);
+    }
+    
+    #result {
+      background-color: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 25px;
+      border-left: 4px solid var(--primary);
+      font-family: 'Consolas', monospace;
+    }
+    
+    .equation {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .solution {
+      color: var(--success);
+      font-weight: 600;
+      margin: 15px 0;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Algebra Solver Pro</h1>
+    
+    <div class="select-container">
+      <select id="eqType">
+        <option value="linear">Linear Equation (1 variable)</option>
+        <option value="quadratic">Quadratic Equation</option>
+        <option value="cubic">Cubic Equation</option>
+        <option value="system">System of Equations</option>
+      </select>
+    </div>
+
+    <div id="inputContainer">
+      <!-- Input fields will be generated here -->
+    </div>
+
+    <button onclick="solve()">Solve Equation</button>
+    
+    <div id="result"></div>
+  </div>
+
+  <script>
+    // Generate proper input fields based on equation type
+    document.getElementById('eqType').addEventListener('change', function() {
+      const type = this.value;
+      let html = '';
+      
+      if (type === 'linear') {
+        html = `
+          <div class="input-group">
+            <label>Enter linear equation:</label>
+            <input type="text" id="eqInput" placeholder="e.g., 3x - 5 = 10">
+            <p style="font-size: 14px; color: #666;">Example: 2x + 3 = 7</p>
+          </div>
+        `;
+      } 
+      else if (type === 'quadratic') {
+        html = `
+          <div class="input-group">
+            <label>Quadratic Equation: ax² + bx + c = 0</label>
+            <input type="number" id="a" placeholder="a (coefficient of x²)" step="any">
+            <input type="number" id="b" placeholder="b (coefficient of x)" step="any">
+            <input type="number" id="c" placeholder="c (constant)" step="any">
+          </div>
+        `;
+      }
+      else if (type === 'cubic') {
+        html = `
+          <div class="input-group">
+            <label>Cubic Equation: ax³ + bx² + cx + d = 0</label>
+            <input type="number" id="a" placeholder="a (coefficient of x³)" step="any">
+            <input type="number" id="b" placeholder="b (coefficient of x²)" step="any">
+            <input type="number" id="c" placeholder="c (coefficient of x)" step="any">
+            <input type="number" id="d" placeholder="d (constant)" step="any">
+          </div>
+        `;
+      }
+      else if (type === 'system') {
+        html = `
+          <div class="input-group">
+            <label>Enter each equation on a new line:</label>
+            <textarea id="eqInput" rows="4" placeholder="e.g., 
+2x + 3y = 7
+x - y = 1"></textarea>
+          </div>
+        `;
+      }
+      
+      document.getElementById('inputContainer').innerHTML = html;
+    });
+
+    // Trigger the change event to show initial input
+    document.getElementById('eqType').dispatchEvent(new Event('change'));
+
+    function solve() {
+      const type = document.getElementById('eqType').value;
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';
+      
+      try {
+        if (type === 'linear') {
+          solveLinearEquation();
+        } 
+        else if (type === 'quadratic') {
+          solveQuadratic();
+        }
+        else if (type === 'cubic') {
+          solveCubic();
+        }
+        else if (type === 'system') {
+          solveSystem();
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<div style="color: #e53e3e; background: #fff5f5; padding: 15px; border-radius: 6px; border-left: 4px solid #e53e3e;">
+          <strong>Error:</strong> ${error.message}
+        </div>`;
+      }
+    }
+
+    function solveLinearEquation() {
+      const equation = document.getElementById('eqInput').value.trim();
+      if (!equation.includes('=')) throw new Error("Equation must contain '='");
+      
+      // Parse equation like "3x - 5 = 10"
+      const [left, right] = equation.split('=').map(s => s.trim());
+      const varMatch = left.match(/[a-zA-Z]/);
+      if (!varMatch) throw new Error("No variable found in equation");
+      
+      const variable = varMatch[0];
+      const coeffMatch = left.match(new RegExp(`([+-]?\\s*\\d*\\.?\\d*)\\s*\\*?\\s*${variable}`));
+      
+      let coefficient = 1;
+      if (coeffMatch) {
+        const coeffStr = coeffMatch[1].replace(/\s/g, '');
+        if (coeffStr === '+') coefficient = 1;
+        else if (coeffStr === '-') coefficient = -1;
+        else if (coeffStr !== '') coefficient = parseFloat(coeffStr);
+      }
+      
+      const constantStr = left.replace(new RegExp(`([+-]?\\s*\\d*\\.?\\d*)\\s*\\*?\\s*${variable}`), '');
+      let constant = 0;
+      if (constantStr.trim() !== '') {
+        constant = eval(constantStr); // Simple eval for remaining constants
+      }
+      
+      const rightValue = parseFloat(right);
+      const solution = (rightValue - constant) / coefficient;
+      
+      document.getElementById('result').innerHTML = `
+        <div class="equation">Solving: ${equation}</div>
+        <div class="solution">Solution:</div>
+        <div>${variable} = ${solution}</div>
+      `;
+    }
+
+    function solveQuadratic() {
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+      const c = parseFloat(document.getElementById('c').value);
+      
+      if (isNaN(a) || isNaN(b) || isNaN(c)) throw new Error("Please enter valid coefficients");
+      if (a === 0) throw new Error("'a' cannot be zero in quadratic equation");
+      
+      const discriminant = b * b - 4 * a * c;
+      let solutionHTML = `<div class="equation">Solving: ${a}x² + ${b}x + ${c} = 0</div>`;
+      
+      if (discriminant > 0) {
+        const root1 = (-b + Math.sqrt(discriminant)) / (2 * a);
+        const root2 = (-b - Math.sqrt(discriminant)) / (2 * a);
+        solutionHTML += `
+          <div class="solution">Two Real Roots:</div>
+          <div>x₁ = ${root1.toFixed(6)}</div>
+          <div>x₂ = ${root2.toFixed(6)}</div>
+        `;
+      } else if (discriminant === 0) {
+        const root = -b / (2 * a);
+        solutionHTML += `
+          <div class="solution">One Real Root (double root):</div>
+          <div>x = ${root.toFixed(6)}</div>
+        `;
+      } else {
+        const realPart = (-b / (2 * a)).toFixed(6);
+        const imagPart = (Math.sqrt(-discriminant) / (2 * a)).toFixed(6);
+        solutionHTML += `
+          <div class="solution">Two Complex Roots:</div>
+          <div>x₁ = ${realPart} + ${imagPart}i</div>
+          <div>x₂ = ${realPart} - ${imagPart}i</div>
+        `;
+      }
+      
+      document.getElementById('result').innerHTML = solutionHTML;
+    }
+
+    function solveCubic() {
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+      const c = parseFloat(document.getElementById('c').value);
+      const d = parseFloat(document.getElementById('d').value);
+      
+      if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d)) throw new Error("Please enter valid coefficients");
+      
+      // Using Vieta's substitution
+      const A = b / a;
+      const B = c / a;
+      const C = d / a;
+      
+      const p = B - (A * A) / 3;
+      const q = (2 * A * A * A) / 27 - (A * B) / 3 + C;
+      const discriminant = (q * q) / 4 + (p * p * p) / 27;
+      
+      let solutionHTML = `<div class="equation">Solving: ${a}x³ + ${b}x² + ${c}x + ${d} = 0</div>`;
+      
+      if (discriminant > 0) {
+        // One real root
+        const u = Math.cbrt(-q / 2 + Math.sqrt(discriminant));
+        const v = Math.cbrt(-q / 2 - Math.sqrt(discriminant));
+        const realRoot = (u + v) - A / 3;
+        
+        solutionHTML += `
+          <div class="solution">One Real Root:</div>
+          <div>x₁ = ${realRoot.toFixed(6)}</div>
+        `;
+      } else if (discriminant === 0) {
+        // All roots real, at least two equal
+        const root1 = 2 * Math.cbrt(-q / 2) - A / 3;
+        const root2 = -Math.cbrt(-q / 2) - A / 3;
+        
+        solutionHTML += `
+          <div class="solution">Roots (at least two equal):</div>
+          <div>x₁ = ${root1.toFixed(6)}</div>
+          <div>x₂ = x₃ = ${root2.toFixed(6)}</div>
+        `;
+      } else {
+        // Three distinct real roots
+        const phi = Math.acos(-q / 2 * Math.sqrt(-27 / (p * p * p))) / 3;
+        const t = 2 * Math.sqrt(-p / 3);
+        
+        const root1 = t * Math.cos(phi) - A / 3;
+        const root2 = t * Math.cos(phi + 2 * Math.PI / 3) - A / 3;
+        const root3 = t * Math.cos(phi + 4 * Math.PI / 3) - A / 3;
+        
+        solutionHTML += `
+          <div class="solution">Three Real Roots:</div>
+          <div>x₁ = ${root1.toFixed(6)}</div>
+          <div>x₂ = ${root2.toFixed(6)}</div>
+          <div>x₃ = ${root3.toFixed(6)}</div>
+        `;
+      }
+      
+      document.getElementById('result').innerHTML = solutionHTML;
+    }
+
+    function solveSystem() {
+      const input = document.getElementById('eqInput').value.trim();
+      const lines = input.split('\n').filter(line => line.trim() !== '');
+      if (lines.length < 2) throw new Error("Enter at least 2 equations");
+      
+      const variables = new Set();
+      const equations = [];
+      
+      // Parse each equation
+      lines.forEach(line => {
+        let [left, right] = line.split('=').map(s => s.trim());
+        if (typeof right === 'undefined') throw new Error("Each equation must contain '='");
+        
+        // Find variables
+        const matches = left.match(/[a-zA-Z]/g) || [];
+        matches.forEach(v => variables.add(v));
+        
+        equations.push({ left, right: parseFloat(right) });
+      });
+      
+      const varsArray = Array.from(variables).sort();
+      if (varsArray.length !== equations.length) {
+        throw new Error(`Need exactly ${varsArray.length} equations for ${varsArray.length} variables`);
+      }
+      
+      const A = [];
+      const b = [];
+      
+      equations.forEach(eq => {
+        const coeffRow = new Array(varsArray.length).fill(0);
+        let left = eq.left;
+        
+        // Parse coefficients
+        varsArray.forEach((v, i) => {
+          const regex = new RegExp(`([+-]?\\s*\\d*\\.?\\d*)\\s*\\*?\\s*${v}\\b`);
+          const match = left.match(regex);
+          if (match) {
+            let num = match[1].replace(/\s/g, '');
+            if (num === '' || num === '+') num = '1';
+            else if (num === '-') num = '-1';
+            coeffRow[i] = parseFloat(num);
+            left = left.replace(match[0], '');
+          }
+        });
+        
+        // Parse constants
+        const constantMatch = left.match(/([+-]?\s*\d+\.?\d*)/);
+        if (constantMatch) {
+          const constant = constantMatch[1].replace(/\s/g, '');
+          eq.right -= parseFloat(constant);
+        }
+        
+        A.push(coeffRow);
+        b.push(eq.right);
+      });
+      
+      // Solve system
+      const solution = math.lusolve(A, b);
+      
+      let solutionHTML = `<div class="equation">Solving system:</div><ul style="padding-left: 20px;">`;
+      lines.forEach(line => solutionHTML += `<li>${line}</li>`);
+      solutionHTML += `</ul><div class="solution">Solution:</div>`;
+      
+      varsArray.forEach((v, i) => {
+        solutionHTML += `<div>${v} = ${solution[i][0].toFixed(6)}</div>`;
+      });
+      
+      document.getElementById('result').innerHTML = solutionHTML;
+    }
+  </script>
+</body>
+</html>
